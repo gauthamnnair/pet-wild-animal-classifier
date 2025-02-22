@@ -24,7 +24,7 @@ This is a Flask-based API that utilizes the YOLOv8 model to detect animals in im
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/your-repo-name.git
+git clone https://github.com/lsoys/pet-wild-animal-classifier
 ```
 
 ### 2. Install Dependencies
