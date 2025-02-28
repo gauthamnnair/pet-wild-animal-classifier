@@ -357,6 +357,28 @@
             margin-left: 8px;
         }        
 
+	.queue {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    border: 2px solid #ddd;
+    background: #f9f9f9;
+    border-radius: 5px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.output-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    border-radius: 5px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
         /* Rest of your existing styles */
     </style>
 </head>
@@ -423,8 +445,7 @@
                     </div>
                     <!-- Detections will be inserted here -->
                 </div>
-            </section>                     
-
+            </section>
         </div>
     </div>
 
@@ -618,12 +639,18 @@
                             document.getElementById('uploaded-image').style.display = 'block';
                             document.getElementById('uploaded-video').style.display = 'none';
                         } else if (item.type === 'video') {
-                            const videoElement = document.getElementById('uploaded-video');
-                            videoElement.src = data.processed_video;
-                            videoElement.style.display = 'block';
-                            document.getElementById('uploaded-image').style.display = 'none';
-                            videoElement.load();
-                        }
+    const videoElement = document.getElementById('uploaded-video');
+    const videoSource = document.getElementById('video-source');
+
+    if (data.processed_video_url) {
+        videoSource.src = data.processed_video_url;
+        videoElement.load();
+        videoElement.style.display = 'block';
+        document.getElementById('uploaded-image').style.display = 'none';
+    } else {
+        alert("No processed video received from the server.");
+    }
+}
         
                         // Display animal details
                         displayAnimalDetails(data.detections);
@@ -729,11 +756,11 @@
                 imgPreview.style.display = 'block';
                 videoPreview.style.display = 'none';
             } else if (fileType === 'video' && file.type.startsWith('video/')) {
-                videoSource.src = URL.createObjectURL(file);
-                videoPreview.style.display = 'block';
-                imgPreview.style.display = 'none';
-                videoPreview.load();
-            }
+               videoSource.src = URL.createObjectURL(file);
+    videoPreview.style.display = 'block';
+    imgPreview.style.display = 'none';
+    videoPreview.load();
+}
         }
 
         function resetAnimalOptions() {
