@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, Blueprint, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, Blueprint, redirect, url_for, session, send_from_directory, send_file
 from ultralytics import YOLO
 import cv2
 import numpy as np
@@ -172,68 +172,68 @@ def process_image(img, conf_threshold=0.3):
     return detections, detected_type, img  # Return the original image with bounding boxes
 
 def process_video(video_path, conf_threshold=0.3):
-    """Process video file and return unique detections with highest confidence."""
     model = get_model().to("cuda")
     cap = cv2.VideoCapture(video_path)
-    
+
     if not cap.isOpened():
-        raise ValueError("Error opening video file")
-    
-    temp_dir = tempfile.gettempdir()
-    temp_output = os.path.join(temp_dir, f'output_{os.getpid()}.mp4')
-    
+        raise ValueError(f"Error opening video file: {video_path}")
+
+    temp_dir = os.path.abspath("temp")
+    os.makedirs(temp_dir, exist_ok=True)
+
+    video_filename = f'processed_{os.getpid()}.mp4'
+    temp_output = os.path.join(temp_dir, video_filename)
+
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    
+    fps = max(int(cap.get(cv2.CAP_PROP_FPS)), 1)  
+
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(temp_output, fourcc, fps, (frame_width, frame_height))
 
     if not out.isOpened():
         cap.release()
-        raise ValueError("Error creating output video file")
+        raise ValueError("Error creating output video file. Check if 'temp/' is writable.")
 
-    unique_detected_animals = {}  # Store highest confidence detection per animal
-    
-    try:
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            
-            results = model(frame, conf=conf_threshold)[0]
-            
-            for r in results.boxes.data.tolist():
-                class_name = results.names[int(r[5])]
-                
-                if class_name.lower() in SUPPORTED_ANIMALS:
-                    detection = process_detection(frame, r, class_name, conf_threshold)
-                    if detection:
-                        # Store only the highest confidence detection per animal
-                        existing_conf = unique_detected_animals.get(class_name, {}).get('confidence', 0)
-                        if detection['confidence'] > existing_conf:
-                            unique_detected_animals[class_name] = detection
-            
-            out.write(frame)
+    frame_count = 0
+    unique_detections = {}
 
-    except Exception as e:
-        print(f"Error processing video: {str(e)}")
-        raise
-    finally:
-        cap.release()
-        out.release()
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break  
+
+        results = model(frame, conf=conf_threshold)[0]
+
+        for r in results.boxes.data.tolist():
+            class_name = results.names[int(r[5])]
+            if class_name.lower() in SUPPORTED_ANIMALS:
+                detection = process_detection(frame, r, class_name, conf_threshold)
+                if detection:
+                    existing_conf = unique_detections.get(class_name, {}).get('confidence', 0)
+                    if detection['confidence'] > existing_conf:
+                        unique_detections[class_name] = detection
+
+        out.write(frame)
+        frame_count += 1
+        print(f"Frame {frame_count} written.")  # Debugging
+
+    cap.release()
+    out.release()
 
     detected_type = "unknown"
-    if unique_detected_animals:
-        detected_type = max(
-            unique_detected_animals.values(), key=lambda d: d['confidence']
-        )['type']
+    if unique_detections:
+        detected_type = max(unique_detections.values(), key=lambda d: d['confidence'])['type']
 
-    return temp_output, list(unique_detected_animals.values()), detected_type
+    if not os.path.exists(temp_output):
+        raise FileNotFoundError(f"Processed video file not found: {temp_output}")
+
+    print(f"Processed video saved at: {temp_output}")
+    return temp_output, list(unique_detections.values()), detected_type
 
 @app.route('/detect', methods=['POST'])
 def detect():
-    global last_detected_animal  # Store previously detected animals
+    global last_detected_animal
 
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
@@ -245,16 +245,20 @@ def detect():
         return jsonify({'error': 'No file selected'}), 400
 
     try:
+        temp_dir = "temp"
+        os.makedirs(temp_dir, exist_ok=True)
+
         if file_type == 'image':
             file_bytes = np.frombuffer(file.read(), np.uint8)
             img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-
             detections, detected_type, processed_img = process_image(img)
 
             if not detections:
-                return jsonify({'error': 'No animals detected'}), 200
+                return jsonify({
+                    'error': 'No animals detected',
+                    'processed_image': None
+                }), 200
 
-            # Pick the most confident detection
             highest_conf_detection = max(detections, key=lambda d: d['confidence'])
 
             if highest_conf_detection != last_detected_animal:
@@ -263,14 +267,16 @@ def detect():
                 img_base64 = base64.b64encode(buffer).decode('utf-8')
 
                 return jsonify({
-                    'detections': [highest_conf_detection],  # Only return top detection
+                    'detections': [highest_conf_detection],
                     'dominant_type': detected_type,
                     'processed_image': f'data:image/jpeg;base64,{img_base64}',
                     'alert_required': detected_type == 'wild'
                 })
 
         elif file_type == 'video':
-            temp_dir = tempfile.gettempdir()
+            temp_dir = "temp"
+            os.makedirs(temp_dir, exist_ok=True)
+
             temp_input = os.path.join(temp_dir, f'input_{os.getpid()}.mp4')
             file.save(temp_input)
 
@@ -285,19 +291,14 @@ def detect():
                 if highest_conf_detection != last_detected_animal:
                     last_detected_animal = highest_conf_detection
 
-                    with open(output_path, 'rb') as video_file:
-                        video_base64 = base64.b64encode(video_file.read()).decode('utf-8')
-
                     return jsonify({
                         'detections': [highest_conf_detection],
                         'dominant_type': detected_type,
-                        'processed_video': f'data:video/mp4;base64,{video_base64}',
                         'alert_required': detected_type == 'wild'
                     })
 
             finally:
                 os.remove(temp_input) if os.path.exists(temp_input) else None
-                os.remove(output_path) if os.path.exists(output_path) else None
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -305,4 +306,4 @@ def detect():
     return jsonify({'error': 'Invalid file type'}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
