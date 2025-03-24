@@ -9,7 +9,7 @@ import os
 import tempfile
 import pandas as pd
 import torch
-
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your_secret_key')  # Use an environment variable in production
@@ -50,6 +50,10 @@ def index():
     if 'user' not in session:
         return redirect(url_for('login'))  # Redirect to login if user is not authenticated
     return render_template('index.html')
+
+@app.route('/info')
+def info():
+    return render_template('info.html')
 
 # Load CSV file into a pandas DataFrame - Using relative path
 CSV_FILE_PATH = os.path.join(os.path.dirname(__file__), 'animal_safety_tips.csv')
@@ -139,37 +143,64 @@ def process_detection(frame, detection, class_name, conf_threshold=0.3):
     }
 
 def process_image(img, conf_threshold=0.3):
-    """Process image and return detections with optional safety information."""
-    # Prepare image tensor (no resizing, use original resolution)
-    img_tensor = torch.from_numpy(img).to('cuda')  # Convert to tensor and use FP16 precision
+    """Process image, detect objects, and return image with bounding boxes."""
 
-    # Perform inference
-    results = model(img_tensor)  # Run the model inference
-    
+    # Resize image to a fixed size (640x640) for YOLO model
+    img_resized = cv2.resize(img, (640, 640))
+
+    # Convert image to tensor (C, H, W) and normalize pixel values
+    img_tensor = torch.from_numpy(img_resized).permute(2, 0, 1).float().to('cuda') / 255.0
+    img_tensor = img_tensor.unsqueeze(0)  # Add batch dimension (1, 3, 640, 640)
+
+    # Perform inference using YOLO model
+    results = model(img_tensor)  # Run model inference
+
+    # Check if results is a list (happens in some YOLO versions)
+    if isinstance(results, list):
+        results = results[0]
+
+    # Get bounding boxes from YOLOv8 format
     detections = []
-    for r in results.boxes.data.tolist():
-        class_name = results.names[int(r[5])]
-        if class_name.lower() in SUPPORTED_ANIMALS:
-            detection = process_detection(img, r, class_name, conf_threshold)
-            if detection:
-                detections.append(detection)
+    if hasattr(results, "boxes"):  # Check if 'boxes' attribute exists
+        boxes = results.boxes.data.cpu().numpy()  # Convert to NumPy array
+    else:
+        boxes = results.pred[0].cpu().numpy()  # Older YOLO versions
 
-    detected_type = 'unknown'
-    if detections:
-        # Get dominant animal type based on confidence
-        detections_summary = defaultdict(float)
-        for det in detections:
-            detections_summary[det['type']] += det['confidence']
-        detected_type = max(detections_summary.items(), key=lambda x: x[1])[0]
+    for box in boxes:
+        x1, y1, x2, y2, conf, class_id = box[:6]
 
-    # Draw bounding boxes on the image for visualization
-    for detection in detections:
-        bbox = detection['bbox']
-        cv2.rectangle(img, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
-        cv2.putText(img, f"{detection['class']} ({detection['confidence']:.2f})", (bbox[0], bbox[1] - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        if conf >= conf_threshold:
+            class_id = int(class_id)  # Convert tensor to integer
+            class_name = results.names[class_id]  # Get class name
 
-    return detections, detected_type, img  # Return the original image with bounding boxes
+            print(f"Detected: {class_name}, Confidence: {conf:.2f}, BBox: ({x1}, {y1}, {x2}, {y2})")
+
+            # Convert bounding box coordinates and confidence score to Python types
+            x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
+            conf = float(conf)  # Convert to standard float
+
+            # Draw bounding box with label
+            cv2.rectangle(img_resized, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box
+            label = f"{class_name} ({conf:.2f})"
+            cv2.putText(img_resized, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 
+                        0.5, (0, 255, 0), 2)
+
+            # Store detection data with correct JSON-compatible types
+            detections.append({
+                'class': class_name,
+                'confidence': conf,
+                'bbox': [x1, y1, x2, y2]
+            })
+
+    # Save the processed image
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    os.makedirs("temp", exist_ok=True)  # Ensure the 'temp' directory exists
+    file_path = os.path.join("temp", f"processed_image_{timestamp}.jpg")
+    cv2.imwrite(file_path, img_resized)
+    print(f"Image saved to: {file_path}")
+
+    # Return the detections and image
+    return json.loads(json.dumps(detections)), img_resized
 
 def process_video(video_path, conf_threshold=0.3):
     model = get_model().to("cuda")
@@ -251,7 +282,12 @@ def detect():
         if file_type == 'image':
             file_bytes = np.frombuffer(file.read(), np.uint8)
             img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-            detections, detected_type, processed_img = process_image(img)
+            
+            # Check if the image was successfully decoded
+            if img is None:
+                return jsonify({'error': 'Failed to decode image'}), 400
+
+            detections, processed_img = process_image(img)
 
             if not detections:
                 return jsonify({
@@ -263,20 +299,17 @@ def detect():
 
             if highest_conf_detection != last_detected_animal:
                 last_detected_animal = highest_conf_detection
+                # Encode the processed image as base64
                 _, buffer = cv2.imencode('.jpg', processed_img)
                 img_base64 = base64.b64encode(buffer).decode('utf-8')
 
                 return jsonify({
                     'detections': [highest_conf_detection],
-                    'dominant_type': detected_type,
                     'processed_image': f'data:image/jpeg;base64,{img_base64}',
-                    'alert_required': detected_type == 'wild'
+                    'alert_required': highest_conf_detection['class'] in ['wild']
                 })
 
         elif file_type == 'video':
-            temp_dir = "temp"
-            os.makedirs(temp_dir, exist_ok=True)
-
             temp_input = os.path.join(temp_dir, f'input_{os.getpid()}.mp4')
             file.save(temp_input)
 
@@ -301,6 +334,7 @@ def detect():
                 os.remove(temp_input) if os.path.exists(temp_input) else None
 
     except Exception as e:
+        print(f"Error occurred: {str(e)}")  # Log the error to the console
         return jsonify({'error': str(e)}), 500
 
     return jsonify({'error': 'Invalid file type'}), 400

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Custom Model Training Guide</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            color: #333;
+        }
+        h1, h2 {
+            color: #007bff;
+        }
+        .step {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        code {
+            background: #e9ecef;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        pre {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .note {
+            background: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Training Custom Animal Detection Model</h1>
+    
+    <div class="step">
+        <h2>Step 1: Dataset Preparation</h2>
+        <ul>
+            <li>Collect a diverse set of images/videos containing your target animals</li>
+            <li>Recommended minimum: 100 images per class</li>
+            <li>Include variations in:
+                <ul>
+                    <li>Lighting conditions</li>
+                    <li>Angles and poses</li>
+                    <li>Backgrounds</li>
+                    <li>Distances</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h2>Step 2: CVAT Annotation</h2>
+        <ol>
+            <li>Create an account on <a href="https://www.cvat.ai" target="_blank">CVAT.ai</a></li>
+            <li>Create a new project:
+                <ul>
+                    <li>Click "Create New Project"</li>
+                    <li>Name your project</li>
+                    <li>Select "Object Detection" as the task type</li>
+                </ul>
+            </li>
+            <li>Create labels for each animal class</li>
+            <li>Upload your images/videos</li>
+            <li>Create bounding boxes:
+                <ul>
+                    <li>Press N to create a new box</li>
+                    <li>Draw around each animal</li>
+                    <li>Select the appropriate label</li>
+                    <li>Ensure tight-fitting boxes</li>
+                </ul>
+            </li>
+            <li>Export annotations in YOLO format</li>
+        </ol>
+
+        <div class="annotation-image" style="margin: 20px 0; text-align: center;">
+            <img src="static/images/dog.png" alt="CVAT Annotation Example" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+            <p style="margin-top: 10px; color: #666; font-style: italic;">Example of CVAT annotation interface with bounding boxes</p>
+        </div>
+
+        <div class="note">
+            Note: Ensure consistent annotation quality across all images.
+        </div>
+    </div>
+
+    <div class="step">
+        <h2>Step 3: Training Custom Model</h2>
+        <p>Using YOLOv8:</p>
+        <pre>
+# 1. Install requirements
+pip install ultralytics
+
+# 2. Prepare dataset structure
+dataset/
+├── train/
+│   ├── images/
+│   └── labels/
+├── val/
+│   ├── images/
+│   └── labels/
+└── data.yaml
+
+# 3. Create data.yaml file:
+names: ['animal1', 'animal2']  # Your class names
+nc: 2  # Number of classes
+train: train/images
+val: val/images
+
+# 4. Train model
+from ultralytics import YOLO
+
+# Load YOLOv8 model
+model = YOLO('yolov8n.yaml')
+
+# Train model
+model.train(
+    data='path/to/data.yaml',
+    epochs=100,
+    imgsz=640,
+    batch=16,
+    name='custom_model'
+)</pre>
+    </div>
+
+    <div class="step">
+        <h2>Step 4: Using Custom Model</h2>
+        <p>Replace the model loading in the Flask application:</p>
+        <pre>
+def get_model():
+    """Get or initialize custom YOLOv8 model"""
+    global model
+    if model is None:
+        model = YOLO('path/to/custom_model.pt')
+    return model</pre>
+        <div class="note">
+            Important: Update the SUPPORTED_ANIMALS dictionary with your custom classes.
+        </div>
+    </div>
+</body>
+</html>

@@ -4,388 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Animals Classification</title>
-    <style>
-        /* All existing styles remain the same */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f8fb;
-            margin: 0;
-            padding: 0;
-        }
-
-        header {
-            background-color: #007bff;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            position: relative;
-        }
-
-        header h1 {
-            margin: 0;
-            font-size: 2em;
-        }
-
-        #train-button {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 16px;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-
-        #train-button:hover {
-            background-color: #218838;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 40px auto;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            display: flex;
-            gap: 20px;
-        }
-
-        .left-column, .right-column {
-            flex: 1;
-            padding: 20px;
-        }
-
-        .upload-section, .result-section, .animal-section {
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        #drop-zone {
-            border: 2px dashed #007bff;
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 20px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        #drop-zone:hover {
-            background-color: #e6f7ff;
-        }
-
-        #uploaded-image, #uploaded-video {
-            max-width: 100%;
-            margin-top: 20px;
-            display: none;
-        }
-
-        #uploaded-video {
-            width: 100%;
-            border-radius: 10px;
-        }
-
-        .detect-button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: background-color 0.3s ease;
-        }
-
-        .detect-button:hover {
-            background-color: #0056b3;
-        }
-
-        .animal-options {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-        }
-
-        .animal-option {
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 10px;
-            border: 2px solid #ddd;
-            text-align: center;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .animal-option.active {
-            background-color: #28a745;
-            color: white;
-            border-color: #28a745;
-            transform: scale(1.1);
-        }
-
-        .animal-option:hover {
-            background-color: #e2e6ea;
-        }
-
-        .animal-option.active {
-            background-color: #28a745;
-            color: white;
-            border-color: #28a745;
-            transform: scale(1.1);
-        }
-
-        .file-select {
-            width: 100%;
-            padding: 10px;
-            margin-top: 20px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-        }
-        .animal-info {
-            margin-top: 20px;
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-        }
-            
-        .animal-info h3 {
-            margin-bottom: 10px;
-            font-size: 1.5em;
-            color: #007bff;
-        }
-            
-        .animal-info p {
-            margin: 5px 0;
-            line-height: 1.5;
-        }    
-            
-        /* Adding new styles for queue system */
-        .queue-section {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-        }
-
-        .queue-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            margin: 5px 0;
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-
-        .queue-item.processing {
-            background-color: #e2f0ff;
-        }
-
-        .queue-item.completed {
-            background-color: #e2ffe2;
-        }
-
-        .remove-item {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-        .queue-controls {
-            margin-top: 10px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        .process-queue {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .clear-queue {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        #camera-button {
-            margin-bottom: 10px;
-            width: 100%;
-        }
-        
-        #capture-button {
-            width: 100%;
-            margin-bottom: 10px;
-            background-color: #28a745;
-        }
-        
-        #camera-stream {
-            border-radius: 10px;
-            border: 2px solid #007bff;
-        }
-
-        /* Add this to your existing CSS */
-        .alert-overlay {
-            position: fixed;
-            top: 20px;
-            right: -400px; /* Start off-screen */
-            width: 350px;
-            background-color: #dc3545;
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            animation: slideIn 0.5s forwards, pulse 2s infinite;
-        }
-
-        .alert-icon {
-            font-size: 24px;
-            background: rgba(255, 255, 255, 0.2);
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-        }
-
-        .alert-content {
-            flex: 1;
-        }
-
-        .alert-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .alert-message {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        @keyframes slideIn {
-            to {
-                right: 20px;
-            }
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.02);
-            }
-            100% {
-                transform: scale(1);
-            }
-        }
-
-        .details-section {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        .details-content {
-            font-size: 14px;
-            color: #333;
-        }
-        
-        .detection-card {
-            margin: 10px 0;
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            background-color: #f8f9fa;
-        }
-        
-        .detection-card h3 {
-            color: #007bff;
-            margin: 0 0 10px 0;
-        }
-        
-        .detection-info {
-            margin: 5px 0;
-            padding: 5px 0;
-        }
-        
-        .detection-info strong {
-            color: #495057;
-        }
-        
-        .detection-divider {
-            margin: 15px 0;
-            border-top: 1px solid #e0e0e0;
-        }
-        
-        .confidence-score {
-            display: inline-block;
-            padding: 2px 6px;
-            background-color: #28a745;
-            color: white;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-left: 8px;
-        }        
-
-	.queue {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 10px;
-    border: 2px solid #ddd;
-    background: #f9f9f9;
-    border-radius: 5px;
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.output-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px;
-    background: white;
-    border-radius: 5px;
-    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-        /* Rest of your existing styles */
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <header>
         <h1>Animals Classification</h1>
-        <button id="train-button" onclick="openTrainingDoc()" style="position: absolute; top: 20px; right: 20px; background-color: #28a745; color: white; border: none; padding: 10px 20px; cursor: pointer; font-size: 16px; border-radius: 5px;">Train</button>
+        <button id="train-button" onclick="window.open('{{ url_for('info') }}', '_blank')" 
+    style="position: absolute; top: 20px; right: 20px; background-color: #28a745; color: white; 
+    border: none; padding: 10px 20px; cursor: pointer; font-size: 16px; border-radius: 5px;">Train</button>
 
     </header>
     <div class="container">
@@ -448,7 +74,7 @@
             </section>
         </div>
     </div>
-
+/*
     <script>
         let stream = null;
 
@@ -504,7 +130,8 @@
             document.body.appendChild(alertDiv);
         
             // Play alert sound
-            const alertSound = new Audio('data:audio/wav;base64,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qJrx4KOQjahZxWbcZgztj2c49nKmkId44S71j0c8eV9yDK6uPRzx5X18eDvjvQ6yKo9ZSS6l//8elePK/Lf//IInrOF/FvDoADYAGBMGb7FtErm5MXMlmPAJQVgWta7Zx2go+8xJ0UiCb8LHHdftWyLJE0QIAIsI+UbXu67dZMjmgDGCGl1H+vpF4NSDckSIkk7Vd+sxEhBQMRU8j/12UIRhzSaUdQ+rQU5kGeFxm+hb1oh6pWWmv3uvmReDl0UnvtapVaIzo1jZbf/pD6ElLqSX+rUmOQNpJFa/r+sa4e/pBlAABoAAAAA3CUgShLdGIxsY7AUABPRrgCABdDuQ5GC7DqPQCgbbJUAoRSUj+NIEig0YfyWUho1VBBBA//uQZB4ABZx5zfMakeAAAAmwAAAAF5F3P0w9GtAAACfAAAAAwLhMDmAYWMgVEG1U0FIGCBgXBXAtfMH10000EEEEEECUBYln03TTTdNBDZopopYvrTTdNa325mImNg3TTPV9q3pmY0xoO6bv3r00y+IDGid/9aaaZTGMuj9mpu9Mpio1dXrr5HERTZSmqU36A3CumzN/9Robv/Xx4v9ijkSRSNLQhAWumap82WRSBUqXStV/YcS+XVLnSS+WLDroqArFkMEsAS+eWmrUzrO0oEmE40RlMZ5+ODIkAyKAGUwZ3mVKmcamcJnMW26MRPgUw6j+LkhyHGVGYjSUUKNpuJUQoOIAyDvEyG8S5yfK6dhZc0Tx1KI/gviKL6qvvFs1+bWtaz58uUNnryq6kt5RzOCkPWlVqVX2a/EEBUdU1KrXLf40GoiiFXK///qpoiDXrOgqDR38JB0bw7SoL+ZB9o1RCkQjQ2CBYZKd/+VJxZRRZlqSkKiws0WFxUyCwsKiMy7hUVFhIaCrNQsKkTIsLivwKKigsj8XYlwt/WKi2N4d//uQRCSAAjURNIHpMZBGYiaQPSYyAAABLAAAAAAAACWAAAAApUF/Mg+0aohSIRobBAsMlO//Kk4soosy1JSFRYWaLC4qZBYWFRGZdwqKiwkNBVmoWFSJkWFxX4FFRQWR+LsS4W/rFRb/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////VEFHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAU291bmRib3kuZGUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMjAwNGh0dHA6Ly93d3cuc291bmRib3kuZGUAAAAAAAAAACU=');
+            const alertSound = new Audio('static/wild_alret.wav');
+
             alertSound.play();
         
             // Auto-remove alert after 5 seconds
@@ -583,6 +210,7 @@
 
         function updateQueueDisplay() {
             const queueList = document.getElementById('queue-list');
+            console.log('Updating queue display:', fileQueue); // Debug log
             queueList.innerHTML = '';
             
             fileQueue.forEach((item, index) => {
@@ -628,6 +256,7 @@
                         });
         
                         const data = await response.json();
+                        console.log('Server response:', data);
         
                         if (data.error) {
                             throw new Error(data.error);
@@ -680,52 +309,57 @@
             isProcessing = false;
         }
 
-        function displayAnimalDetails(detections) {
-            const detailsElement = document.getElementById('animal-details');
-            const noDetectionElement = document.getElementById('no-detection');
-            
-            if (!detections || detections.length === 0) {
-                detailsElement.innerHTML = `
-                    <div id="no-detection" style="text-align: center; color: #666;">
-                        No animals detected. Upload an image or video to detect animals.
-                    </div>
-                `;
-                return;
-            }
+    function displayAnimalDetails(detections) {
+        console.log('Displaying animal details:', detections); // Debug log
+        const detailsElement = document.getElementById('animal-details');
         
-            // Clear previous content
-            detailsElement.innerHTML = '';
-            
-            // Display each detection
-            detections.forEach((detection, index) => {
-                const detectionElement = document.createElement('div');
-                detectionElement.className = 'detection-card';
-                
-                const confidencePercent = (detection.confidence * 100).toFixed(1);
-                
-                detectionElement.innerHTML = `
-                    <h3>
-                        ${detection.class.charAt(0).toUpperCase() + detection.class.slice(1)}
-                        <span class="confidence-score">${confidencePercent}% confident</span>
-                    </h3>
-                    <div class="detection-info">
-                        <strong>Type:</strong> ${detection.type.charAt(0).toUpperCase() + detection.type.slice(1)}
-                    </div>
-                    <div class="detection-info">
-                        <strong>Description:</strong> ${detection.description || 'No description available'}
-                    </div>
-                    <div class="detection-info">
-                        <strong>Safety Tips:</strong> ${detection.safety_tips || 'No safety tips available'}
-                    </div>
-                `;
-                
-                if (index < detections.length - 1) {
-                    detectionElement.appendChild(document.createElement('hr')).className = 'detection-divider';
-                }
-                
-                detailsElement.appendChild(detectionElement);
-            });
+        if (!detections || detections.length === 0) {
+            detailsElement.innerHTML = `
+                <div id="no-detection" style="text-align: center; color: #666;">
+                    No animals detected. Upload an image or video to detect animals.
+                </div>
+            `;
+            return;
         }
+
+        // Clear previous content
+        detailsElement.innerHTML = '';
+        
+        // Display each detection
+        detections.forEach((detection, index) => {
+            const detectionElement = document.createElement('div');
+            detectionElement.className = 'detection-card';
+            
+            const confidencePercent = (detection.confidence * 100).toFixed(1);
+            const confidenceText = `${confidencePercent}% confident`;
+
+            // Check if confidence is low
+            const confidenceClass = detection.confidence < 0.5 ? 'low-confidence' : 'high-confidence';
+
+            detectionElement.innerHTML = `
+                <h3>
+                    ${detection.class.charAt(0).toUpperCase() + detection.class.slice(1)}
+                    <span class="confidence-score ${confidenceClass}">${confidenceText}</span>
+                </h3>
+                <div class="detection-info">
+                    <strong>Type:</strong> ${detection.type.charAt(0).toUpperCase() + detection.type.slice(1)}
+                </div>
+                <div class="detection-info">
+                    <strong>Description:</strong> ${detection.description || 'No description available'}
+                </div>
+                <div class="detection-info">
+                    <strong>Safety Tips:</strong> ${detection.safety_tips || 'No safety tips available'}
+                </div>
+            `;
+            
+            // Add a separator line between detection cards (except for the last one)
+            if (index < detections.length - 1) {
+                detectionElement.appendChild(document.createElement('hr')).className = 'detection-divider';
+            }
+            
+            detailsElement.appendChild(detectionElement);
+        });
+    }
         
 
         function handleFileTypeChange(fileType) {
@@ -768,164 +402,7 @@
                 el.classList.remove('active');
             });
         }
-
-        function openTrainingDoc() {
-            // Create a new window for the training documentation
-            const trainingWindow = window.open('', 'Training Documentation', 'width=800,height=600,scrollbars=yes');
-            
-            // Add the training documentation content
-            trainingWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Custom Model Training Guide</title>
-                    <style>
-                        body {
-                            font-family: Arial, sans-serif;
-                            line-height: 1.6;
-                            margin: 20px;
-                            color: #333;
-                        }
-                        h1, h2 {
-                            color: #007bff;
-                        }
-                        .step {
-                            margin-bottom: 30px;
-                            padding: 20px;
-                            background: #f8f9fa;
-                            border-radius: 5px;
-                        }
-                        code {
-                            background: #e9ecef;
-                            padding: 2px 5px;
-                            border-radius: 3px;
-                        }
-                        pre {
-                            background: #e9ecef;
-                            padding: 15px;
-                            border-radius: 5px;
-                            overflow-x: auto;
-                        }
-                        .note {
-                            background: #fff3cd;
-                            padding: 15px;
-                            border-left: 4px solid #ffc107;
-                            margin: 10px 0;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <h1>Training Custom Animal Detection Model</h1>
-                    
-                    <div class="step">
-                        <h2>Step 1: Dataset Preparation</h2>
-                        <ul>
-                            <li>Collect a diverse set of images/videos containing your target animals</li>
-                            <li>Recommended minimum: 100 images per class</li>
-                            <li>Include variations in:
-                                <ul>
-                                    <li>Lighting conditions</li>
-                                    <li>Angles and poses</li>
-                                    <li>Backgrounds</li>
-                                    <li>Distances</li>
-                                </ul>
-                            </li>
-                        </ul>
-                    </div>
-        
-                    <div class="step">
-                        <h2>Step 2: CVAT Annotation</h2>
-                        <ol>
-                            <li>Create account on <a href="https://www.cvat.ai" target="_blank">CVAT.ai</a></li>
-                            <li>Create new project:
-                                <ul>
-                                    <li>Click "Create New Project"</li>
-                                    <li>Name your project</li>
-                                    <li>Select "Object Detection" as task type</li>
-                                </ul>
-                            </li>
-                            <li>Create labels for each animal class</li>
-                            <li>Upload your images/videos</li>
-                            <li>Create bounding boxes:
-                                <ul>
-                                    <li>Press N to create a new box</li>
-                                    <li>Draw around each animal</li>
-                                    <li>Select appropriate label</li>
-                                    <li>Ensure tight fitting boxes</li>
-                                </ul>
-                            </li>
-                            <li>Export annotations in YOLO format</li>
-                        </ol>
-
-                        <div class="annotation-image" style="margin: 20px 0; text-align: center;">
-                            <img src="{{ url_for('static', filename='images/dog.png') }}" alt="CVAT Annotation Example" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
-                            <p style="margin-top: 10px; color: #666; font-style: italic;">Example of CVAT annotation interface with bounding boxes</p>
-                        </div>
-
-                        <div class="note">
-                            Note: Ensure consistent annotation quality across all images
-                        </div>
-                    </div>
-        
-                    <div class="step">
-                        <h2>Step 3: Training Custom Model</h2>
-                        <p>Using YOLOv8:</p>
-                        <pre>
-        # 1. Install requirements
-        pip install ultralytics
-        
-        # 2. Prepare dataset structure
-        dataset/
-        ├── train/
-        │   ├── images/
-        │   └── labels/
-        ├── val/
-        │   ├── images/
-        │   └── labels/
-        └── data.yaml
-        
-        # 3. Create data.yaml file:
-        names: ['animal1', 'animal2']  # Your class names
-        nc: 2  # Number of classes
-        train: train/images
-        val: val/images
-        
-        # 4. Train model
-        from ultralytics import YOLO
-        
-        # Load YOLOv8 model
-        model = YOLO('yolov8n.yaml')
-        
-        # Train model
-        model.train(
-            data='path/to/data.yaml',
-            epochs=100,
-            imgsz=640,
-            batch=16,
-            name='custom_model'
-        )</pre>
-                    </div>
-        
-                    <div class="step">
-                        <h2>Step 4: Using Custom Model</h2>
-                        <p>Replace the model loading in the Flask application:</p>
-                        <pre>
-        def get_model():
-            """Get or initialize custom YOLOv8 model"""
-            global model
-            if model is None:
-                model = YOLO('path/to/custom_model.pt')
-            return model</pre>
-                        <div class="note">
-                            Important: Update SUPPORTED_ANIMALS dictionary with your custom classes
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `);
-            
-            trainingWindow.document.close();
-        }
-    </script>
+    </script>*/
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
